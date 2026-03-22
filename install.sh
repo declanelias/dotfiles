@@ -3,74 +3,101 @@ set -e
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "==> Installing dotfiles from $DOTFILES_DIR"
+install_homebrew() {
+  if command -v brew &>/dev/null; then
+    return
+  fi
 
-# --- Homebrew ---
-if ! command -v brew &>/dev/null; then
   echo "==> Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  # Add brew to PATH for the rest of this script
+
   if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
   elif [[ -f /usr/local/bin/brew ]]; then
     eval "$(/usr/local/bin/brew shellenv)"
   fi
-else
-  echo "==> Homebrew already installed"
-fi
+}
 
-# --- Brew packages ---
-echo "==> Installing Homebrew packages..."
-brew install openssl@3 libpq neovim
+install_brew_packages() {
+  local packages=(libpq neovim)
+  local to_install=()
 
-# --- Oh My Zsh ---
-if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+  for pkg in "${packages[@]}"; do
+    if ! brew list "$pkg" &>/dev/null; then
+      to_install+=("$pkg")
+    fi
+  done
+
+  if [[ ${#to_install[@]} -gt 0 ]]; then
+    echo "==> Installing Homebrew packages: ${to_install[*]}"
+    brew install "${to_install[@]}"
+  fi
+}
+
+install_oh_my_zsh() {
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    return
+  fi
+
   echo "==> Installing Oh My Zsh..."
   RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-else
-  echo "==> Oh My Zsh already installed"
-fi
+}
 
-# --- ZSH plugins ---
-ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+install_zsh_plugins() {
+  local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-declare -A plugins=(
-  [zsh-autosuggestions]="https://github.com/zsh-users/zsh-autosuggestions"
-  [zsh-syntax-highlighting]="https://github.com/zsh-users/zsh-syntax-highlighting"
-  [you-should-use]="https://github.com/MichaelAqworter/zsh-you-should-use"
-  [zsh-vi-mode]="https://github.com/jeffreytse/zsh-vi-mode"
-)
+  declare -A plugins=(
+    [zsh-autosuggestions]="https://github.com/zsh-users/zsh-autosuggestions"
+    [zsh-syntax-highlighting]="https://github.com/zsh-users/zsh-syntax-highlighting"
+    [you-should-use]="https://github.com/MichaelAqworter/zsh-you-should-use"
+    [zsh-vi-mode]="https://github.com/jeffreytse/zsh-vi-mode"
+  )
 
-echo "==> Installing ZSH plugins..."
-for plugin in "${!plugins[@]}"; do
-  dest="$ZSH_CUSTOM/plugins/$plugin"
-  if [[ ! -d "$dest" ]]; then
-    echo "    Installing $plugin..."
-    git clone --depth=1 "${plugins[$plugin]}" "$dest"
-  else
-    echo "    $plugin already installed"
-  fi
-done
+  for plugin in "${!plugins[@]}"; do
+    local dest="$zsh_custom/plugins/$plugin"
+    if [[ ! -d "$dest" ]]; then
+      echo "==> Installing ZSH plugin: $plugin"
+      git clone --depth=1 "${plugins[$plugin]}" "$dest"
+    fi
+  done
+}
 
-# --- Symlinks ---
-echo "==> Creating symlinks..."
+create_symlinks() {
+  local targets=("$HOME/.zshrc" "$HOME/.zsh")
+  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh")
+  local created=false
 
-# Back up existing files if they're not already symlinks
-for target in "$HOME/.zshrc" "$HOME/.zsh"; do
-  if [[ -e "$target" && ! -L "$target" ]]; then
-    backup="$target.backup.$(date +%Y%m%d%H%M%S)"
-    echo "    Backing up $target -> $backup"
-    mv "$target" "$backup"
-  elif [[ -L "$target" ]]; then
-    rm "$target"
-  fi
-done
+  for i in "${!targets[@]}"; do
+    local target="${targets[$i]}"
+    local source="${sources[$i]}"
 
-ln -s "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
-ln -s "$DOTFILES_DIR/.zsh" "$HOME/.zsh"
+    # Already correctly linked
+    if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+      continue
+    fi
 
-echo "    ~/.zshrc -> $DOTFILES_DIR/.zshrc"
-echo "    ~/.zsh   -> $DOTFILES_DIR/.zsh"
+    if [[ -e "$target" && ! -L "$target" ]]; then
+      local backup="$target.backup.$(date +%Y%m%d%H%M%S)"
+      echo "==> Backing up $target -> $backup"
+      mv "$target" "$backup"
+    elif [[ -L "$target" ]]; then
+      rm "$target"
+    fi
 
-echo ""
-echo "==> Done! Restart your shell or run: source ~/.zshrc"
+    ln -s "$source" "$target"
+    echo "==> Linked $target -> $source"
+    created=true
+  done
+}
+
+main() {
+  install_homebrew
+  install_brew_packages
+  install_oh_my_zsh
+  install_zsh_plugins
+  create_symlinks
+
+  echo "==> Done!"
+}
+
+main

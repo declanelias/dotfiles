@@ -48,10 +48,10 @@ install_zsh_plugins() {
 
   local names=(zsh-autosuggestions zsh-syntax-highlighting you-should-use zsh-vi-mode)
   local urls=(
-    "https://github.com/zsh-users/zsh-autosuggestions"
-    "https://github.com/zsh-users/zsh-syntax-highlighting"
-    "https://github.com/MichaelAqworter/zsh-you-should-use"
-    "https://github.com/jeffreytse/zsh-vi-mode"
+    "git@github.com:zsh-users/zsh-autosuggestions.git"
+    "git@github.com:zsh-users/zsh-syntax-highlighting.git"
+    "git@github.com:MichaelAquarworter/zsh-you-should-use.git"
+    "git@github.com:jeffreytse/zsh-vi-mode.git"
   )
 
   for i in $(seq 0 $((${#names[@]} - 1))); do

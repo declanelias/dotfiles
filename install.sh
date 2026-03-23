@@ -18,21 +18,6 @@ install_homebrew() {
   fi
 }
 
-install_brew_packages() {
-  local packages=(libpq neovim)
-  local to_install=()
-
-  for pkg in "${packages[@]}"; do
-    if ! brew list "$pkg" &>/dev/null; then
-      to_install+=("$pkg")
-    fi
-  done
-
-  if [[ ${#to_install[@]} -gt 0 ]]; then
-    echo "==> Installing Homebrew packages: ${to_install[*]}"
-    brew install "${to_install[@]}"
-  fi
-}
 
 install_oh_my_zsh() {
   if [[ -d "$HOME/.oh-my-zsh" ]]; then
@@ -46,21 +31,23 @@ install_oh_my_zsh() {
 install_zsh_plugins() {
   local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-  local names=(zsh-autosuggestions zsh-syntax-highlighting you-should-use zsh-vi-mode)
-  local urls=(
-    "git@github.com:zsh-users/zsh-autosuggestions.git"
-    "git@github.com:zsh-users/zsh-syntax-highlighting.git"
-    "git@github.com:MichaelAquarworter/zsh-you-should-use.git"
-    "git@github.com:jeffreytse/zsh-vi-mode.git"
-  )
+  local dest="$zsh_custom/plugins/zsh-vi-mode"
+  if [[ ! -d "$dest" ]]; then
+    echo "==> Installing ZSH plugin: zsh-vi-mode"
+    git clone --depth=1 https://github.com/jeffreytse/zsh-vi-mode "$dest"
+  fi
 
-  for i in $(seq 0 $((${#names[@]} - 1))); do
-    local dest="$zsh_custom/plugins/${names[$i]}"
-    if [[ ! -d "$dest" ]]; then
-      echo "==> Installing ZSH plugin: ${names[$i]}"
-      git clone --depth=1 "${urls[$i]}" "$dest"
-    fi
-  done
+  dest="$zsh_custom/plugins/zsh-autosuggestions"
+  if [[ ! -d "$dest" ]]; then
+    echo "==> Installing ZSH plugin: zsh-autosuggestions"
+    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$dest"
+  fi
+
+  dest="$zsh_custom/plugins/zsh-syntax-highlighting"
+  if [[ ! -d "$dest" ]]; then
+    echo "==> Installing ZSH plugin: zsh-syntax-highlighting"
+    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$dest"
+  fi
 }
 
 create_symlinks() {
@@ -93,7 +80,6 @@ create_symlinks() {
 
 main() {
   install_homebrew
-  install_brew_packages
   install_oh_my_zsh
   install_zsh_plugins
   create_symlinks

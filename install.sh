@@ -46,18 +46,19 @@ install_oh_my_zsh() {
 install_zsh_plugins() {
   local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-  declare -A plugins=(
-    [zsh-autosuggestions]="https://github.com/zsh-users/zsh-autosuggestions"
-    [zsh-syntax-highlighting]="https://github.com/zsh-users/zsh-syntax-highlighting"
-    [you-should-use]="https://github.com/MichaelAqworter/zsh-you-should-use"
-    [zsh-vi-mode]="https://github.com/jeffreytse/zsh-vi-mode"
+  local names=(zsh-autosuggestions zsh-syntax-highlighting you-should-use zsh-vi-mode)
+  local urls=(
+    "https://github.com/zsh-users/zsh-autosuggestions"
+    "https://github.com/zsh-users/zsh-syntax-highlighting"
+    "https://github.com/MichaelAqworter/zsh-you-should-use"
+    "https://github.com/jeffreytse/zsh-vi-mode"
   )
 
-  for plugin in "${!plugins[@]}"; do
-    local dest="$zsh_custom/plugins/$plugin"
+  for i in $(seq 0 $((${#names[@]} - 1))); do
+    local dest="$zsh_custom/plugins/${names[$i]}"
     if [[ ! -d "$dest" ]]; then
-      echo "==> Installing ZSH plugin: $plugin"
-      git clone --depth=1 "${plugins[$plugin]}" "$dest"
+      echo "==> Installing ZSH plugin: ${names[$i]}"
+      git clone --depth=1 "${urls[$i]}" "$dest"
     fi
   done
 }

@@ -29,7 +29,7 @@ install_oh_my_zsh() {
 }
 
 install_brew_packages() {
-  local packages=(yabai skhd)
+  local packages=(neovim yabai skhd)
 
   for pkg in "${packages[@]}"; do
     if brew list "$pkg" &>/dev/null; then
@@ -63,8 +63,8 @@ install_zsh_plugins() {
 }
 
 create_symlinks() {
-  local targets=("$HOME/.zshrc" "$HOME/.zsh" "$HOME/.config/yabai/yabairc" "$HOME/.config/skhd/skhdrc")
-  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh" "$DOTFILES_DIR/yabai/yabairc" "$DOTFILES_DIR/skhd/skhdrc")
+  local targets=("$HOME/.zshrc" "$HOME/.zsh" "$HOME/.config/yabai/yabairc" "$HOME/.config/skhd/skhdrc" "$HOME/.config/nvim")
+  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh" "$DOTFILES_DIR/yabai/yabairc" "$DOTFILES_DIR/skhd/skhdrc" "$DOTFILES_DIR/nvim")
   local created=false
 
   for i in "${!targets[@]}"; do

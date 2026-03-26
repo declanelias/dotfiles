@@ -5,4 +5,9 @@ return {
     require("declan.lazy.mason"),
     require("declan.lazy.rustaceanvim"),
     require("declan.lazy.blink"),
+    require("declan.lazy.gitsigns"),
+    require("declan.lazy.conform"),
+    require("declan.lazy.oil"),
+    require("declan.lazy.lualine"),
+    require("declan.lazy.whichkey"),
 }

@@ -8,3 +8,4 @@ source $ZSH/oh-my-zsh.sh
 for conf in ~/.zsh/*.zsh; do
   source "$conf"
 done
+

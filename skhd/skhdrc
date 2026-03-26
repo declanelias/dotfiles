@@ -1,0 +1,32 @@
+alt - a : open -a "Arc"
+alt - c : open -a "Cursor"
+alt - g : open -a "Ghostty"
+
+# Focus windows
+alt - h : yabai -m window --focus west
+alt - j : yabai -m window --focus south
+alt - k : yabai -m window --focus north
+alt - l : yabai -m window --focus east
+
+# Swap windows
+shift + alt - h : yabai -m window --swap west
+shift + alt - j : yabai -m window --swap south
+shift + alt - k : yabai -m window --swap north
+shift + alt - l : yabai -m window --swap east
+
+# Move window to other screen
+shift + alt - n : yabai -m window --display next --focus
+shift + alt - p : yabai -m window --display prev --focus
+
+# Insert direction (tells next warp where to go)
+shift + alt - s : yabai -m window --insert south
+shift + alt - e : yabai -m window --insert east
+
+# Warp window (move it into another window's split)
+ctrl + alt - h : yabai -m window --warp west
+ctrl + alt - j : yabai -m window --warp south
+ctrl + alt - k : yabai -m window --warp north
+ctrl + alt - l : yabai -m window --warp east
+
+# Balance all splits evenly
+alt - e : yabai -m space --balance

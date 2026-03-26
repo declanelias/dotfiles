@@ -28,6 +28,18 @@ install_oh_my_zsh() {
   RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 }
 
+install_brew_packages() {
+  local packages=(yabai skhd)
+
+  for pkg in "${packages[@]}"; do
+    if brew list "$pkg" &>/dev/null; then
+      continue
+    fi
+    echo "==> Installing $pkg..."
+    brew install "$pkg"
+  done
+}
+
 install_zsh_plugins() {
   local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
@@ -51,8 +63,8 @@ install_zsh_plugins() {
 }
 
 create_symlinks() {
-  local targets=("$HOME/.zshrc" "$HOME/.zsh")
-  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh")
+  local targets=("$HOME/.zshrc" "$HOME/.zsh" "$HOME/.config/yabai/yabairc" "$HOME/.config/skhd/skhdrc")
+  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh" "$DOTFILES_DIR/yabai/yabairc" "$DOTFILES_DIR/skhd/skhdrc")
   local created=false
 
   for i in "${!targets[@]}"; do
@@ -72,6 +84,7 @@ create_symlinks() {
       rm "$target"
     fi
 
+    mkdir -p "$(dirname "$target")"
     ln -s "$source" "$target"
     echo "==> Linked $target -> $source"
     created=true
@@ -80,6 +93,7 @@ create_symlinks() {
 
 main() {
   install_homebrew
+  install_brew_packages
   install_oh_my_zsh
   install_zsh_plugins
   create_symlinks

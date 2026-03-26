@@ -1,6 +1,7 @@
 # Navigation
 alias nv="cd ~/novig-code/monorepo"
 alias mag="cd ~/novig-code/mag/monorepo"
+alias polymarket="cd ~/novig-code/polymarket/monorepo"
 
 # Tools
 alias vim="nvim"

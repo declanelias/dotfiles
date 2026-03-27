@@ -30,3 +30,12 @@ ctrl + alt - l : yabai -m window --warp east
 
 # Balance all splits evenly
 alt - e : yabai -m space --balance
+
+# Focus next/prev display
+ctrl + alt - n : yabai -m display --focus next
+ctrl + alt - p : yabai -m display --focus prev
+
+# Mirror axes
+ctrl + alt - x : yabai -m space --mirror x-axis
+ctrl + alt - y : yabai -m space --mirror y-axis
+

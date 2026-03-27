@@ -1,0 +1,12 @@
+layout {
+    pane split_direction="vertical" {
+        pane {
+            command "bash"
+            args "-c" "cd ~/novig-code/mag/monorepo && docker compose up hasura-gql --no-deps; bash"
+        }
+        pane {
+            command "bash"
+            args "-c" "cd ~/novig-code/mag/monorepo && docker compose up --build postgres redis kafka; bash"
+        }
+    }
+}

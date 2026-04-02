@@ -8,6 +8,6 @@ return {
         },
     },
     keys = {
-        { "<leader>pv", "<cmd>Oil<cr>", desc = "Open file explorer" },
+        { "<leader>e", "<cmd>Oil<cr>", desc = "Open file explorer" },
     },
 }

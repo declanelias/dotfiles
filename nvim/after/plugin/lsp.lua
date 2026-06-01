@@ -36,6 +36,19 @@ vim.lsp.config.pyright = {}
 
 -- Rust: managed by rustaceanvim, not configured here
 
+-- Advertise foldingRange support to every server (consumed by nvim-ufo's lsp provider).
+-- Deep-merges with blink.cmp's capabilities rather than replacing them.
+vim.lsp.config("*", {
+  capabilities = {
+    textDocument = {
+      foldingRange = {
+        dynamicRegistration = false,
+        lineFoldingOnly = true,
+      },
+    },
+  },
+})
+
 -- Enable the servers
 vim.lsp.enable({ "lua_ls", "ts_ls", "pyright" })
 
@@ -44,7 +57,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local opts = { buffer = args.buf }
     vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)          -- go to definition
-    vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)                -- show type/docs popup
+    vim.keymap.set("n", "K", function()                              -- peek closed fold, else show type/docs popup
+      if not require("ufo").peekFoldedLinesUnderCursor() then
+        vim.lsp.buf.hover()
+      end
+    end, opts)
     vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)          -- find all references
     vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)        -- jump to previous error/warning
     vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)        -- jump to next error/warning

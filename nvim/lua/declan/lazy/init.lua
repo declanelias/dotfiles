@@ -10,5 +10,6 @@ return {
     require("declan.lazy.oil"),
     require("declan.lazy.lualine"),
     require("declan.lazy.whichkey"),
+    require("declan.lazy.ufo"),
     unpack(require("declan.lazy.dap")),
 }

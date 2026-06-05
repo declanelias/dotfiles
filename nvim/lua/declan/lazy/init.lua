@@ -10,6 +10,7 @@ return {
     require("declan.lazy.neotree"),
     require("declan.lazy.lualine"),
     require("declan.lazy.whichkey"),
+    require("declan.lazy.harpoon"),
     require("declan.lazy.ufo"),
     unpack(require("declan.lazy.dap")),
 }

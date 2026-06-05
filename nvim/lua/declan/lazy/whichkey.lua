@@ -6,7 +6,6 @@ return {
             { "<leader>d", group = "Debug" },
             { "<leader>dg", group = "Debug logs" },
             { "<leader>f", group = "Find" },
-            { "<leader>h", group = "Hunks" },
             { "<leader>l", group = "LSP" },
         },
     },

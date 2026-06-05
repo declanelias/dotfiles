@@ -44,7 +44,12 @@ return {
 			fold_virt_text_handler = handler,
 			-- LSP folds (lua_ls/ts_ls/pyright) with treesitter as fallback;
 			-- ufo ships its own folds.scm queries so rust/etc. fold without an LSP provider
-			provider_selector = function(_, _, _)
+			provider_selector = function(_, filetype, buftype)
+				-- disable ufo on special buffers (neo-tree, etc.) so the
+				-- treesitter provider doesn't raise an uncaught UfoFallbackException
+				if buftype ~= "" or filetype == "neo-tree" then
+					return ""
+				end
 				return { "lsp", "treesitter" }
 			end,
 		})

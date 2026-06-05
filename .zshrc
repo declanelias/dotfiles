@@ -9,3 +9,7 @@ for conf in ~/.zsh/*.zsh; do
   source "$conf"
 done
 
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/Users/declanelias/.lmstudio/bin"
+# End of LM Studio CLI section
+

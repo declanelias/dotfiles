@@ -1,3 +1,8 @@
 .DS_Store
 
 nvim/undo
+
+.omc/*
+
+# Local secrets — never commit
+.zsh/secrets.zsh

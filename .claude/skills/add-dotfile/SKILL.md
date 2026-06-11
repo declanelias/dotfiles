@@ -17,7 +17,7 @@ Add the config at `$ARGUMENTS` to this dotfiles repo and wire it up.
 3. Copy the config contents into the new repo file.
 4. Update `install.sh`:
    - Add the new symlink target/source pair to the `targets` and `sources` arrays in `create_symlinks()`.
-   - If the config requires a brew package, add it to the `packages` array in `install_brew_packages()`.
+   - If the config requires a brew package, add it to the right array in `install_brew_packages()`: `formulae` (plain formula), `tapped` (tap-qualified, e.g. `koekeishiya/formulae/yabai`), or `casks` (GUI apps).
 5. Ask the user if any brew packages need to be installed for this config. If yes, add them.
 
 ## Rules

@@ -29,14 +29,33 @@ install_oh_my_zsh() {
 }
 
 install_brew_packages() {
-  local packages=(neovim yabai skhd zellij ghostty)
+  local formulae=(neovim zellij)
+  local tapped=(koekeishiya/formulae/yabai koekeishiya/formulae/skhd)
+  local casks=(ghostty)
 
-  for pkg in "${packages[@]}"; do
+  for pkg in "${formulae[@]}"; do
     if brew list "$pkg" &>/dev/null; then
       continue
     fi
     echo "==> Installing $pkg..."
     brew install "$pkg"
+  done
+
+  for pkg in "${tapped[@]}"; do
+    local name="${pkg##*/}"
+    if brew list "$name" &>/dev/null; then
+      continue
+    fi
+    echo "==> Installing $name..."
+    brew install "$pkg"
+  done
+
+  for pkg in "${casks[@]}"; do
+    if brew list --cask "$pkg" &>/dev/null; then
+      continue
+    fi
+    echo "==> Installing $pkg (cask)..."
+    brew install --cask "$pkg"
   done
 }
 

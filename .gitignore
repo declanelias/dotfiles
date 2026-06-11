@@ -6,3 +6,6 @@ nvim/undo
 
 # Local secrets — never commit
 .zsh/secrets.zsh
+
+# Local machine-specific config — never commit
+.zsh/local.zsh

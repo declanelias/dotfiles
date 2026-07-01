@@ -2,7 +2,6 @@ return {
     "nvim-lualine/lualine.nvim",
     dependencies = {
         "nvim-tree/nvim-web-devicons",
-        "SmiteshP/nvim-navic",
     },
     opts = {
         options = {
@@ -13,10 +12,6 @@ return {
                 { "filename", path = 1 },
             },
         },
-        winbar = {
-            lualine_c = {
-                { "navic" },
-            },
-        },
+        -- winbar is owned by dropbar.nvim now (see lazy/dropbar.lua), not lualine
     },
 }

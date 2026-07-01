@@ -521,6 +521,7 @@ ui {
     }
 }
 
-// Hide the status bar entirely
-simplified_ui true
-default_layout "compact"
+// simplified_ui off so zjstatus powerline glyphs render (Ghostty bundles Nerd Font symbols)
+simplified_ui false
+// custom zjstatus bar lives in layouts/default.kdl
+default_layout "default"

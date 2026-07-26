@@ -1,13 +1,4 @@
-require("mason").setup({
-  ui = {
-    icons = {
-      package_installed = "",
-      package_pending = "",
-      package_uninstalled = "",
-    },
-  }
-})
-
+-- mason itself is set up by its lazy spec (lua/declan/lazy/mason.lua)
 require("mason-lspconfig").setup({
   ensure_installed = {
     "lua_ls",
@@ -34,6 +25,9 @@ vim.lsp.config.ts_ls = {}
 -- Python
 vim.lsp.config.pyright = {}
 
+-- C/C++
+vim.lsp.config.clangd = {}
+
 -- Rust: managed by rustaceanvim, not configured here
 
 -- Advertise foldingRange support to every server (consumed by nvim-ufo's lsp provider).
@@ -50,21 +44,32 @@ vim.lsp.config("*", {
 })
 
 -- Enable the servers
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright" })
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "clangd" })
+
+-- Delete nvim's default gr-prefixed LSP maps (grr/grn/gra/gri/grt) so the
+-- buffer-local `gr` below fires without waiting out the chord timeout
+for _, lhs in ipairs({ "grr", "grn", "gra", "gri", "grt" }) do
+  pcall(vim.keymap.del, "n", lhs)
+end
+pcall(vim.keymap.del, "x", "gra")
 
 -- Keybindings when LSP attaches
+-- (K — peek fold, else hover — is global, set in lazy/ufo.lua)
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
     local opts = { buffer = args.buf }
     vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)          -- go to definition
-    vim.keymap.set("n", "K", function()                              -- peek closed fold, else show type/docs popup
-      if not require("ufo").peekFoldedLinesUnderCursor() then
-        vim.lsp.buf.hover()
-      end
-    end, opts)
+    vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)      -- go to implementation (concrete body)
+    vim.keymap.set("n", "gy", vim.lsp.buf.type_definition, opts)     -- go to type definition
     vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)          -- find all references
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)        -- jump to previous error/warning
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)        -- jump to next error/warning
+    vim.keymap.set("n", "<leader>li", vim.lsp.buf.incoming_calls, opts) -- call hierarchy: who calls this
+    vim.keymap.set("n", "<leader>lo", vim.lsp.buf.outgoing_calls, opts) -- call hierarchy: what this calls
+    vim.keymap.set("n", "[d", function()                             -- jump to previous error/warning
+      vim.diagnostic.jump({ count = -1, float = true })
+    end, opts)
+    vim.keymap.set("n", "]d", function()                             -- jump to next error/warning
+      vim.diagnostic.jump({ count = 1, float = true })
+    end, opts)
     vim.keymap.set("n", "<leader>lr", vim.lsp.buf.rename, opts)      -- rename symbol across project
     vim.keymap.set("n", "<leader>la", vim.lsp.buf.code_action, opts) -- code actions (fixes, refactors)
     vim.keymap.set("n", "<leader>ld", vim.diagnostic.open_float, opts) -- diagnostic float
@@ -81,11 +86,8 @@ vim.diagnostic.config({
 vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if client and client.supports_method('textDocument/documentHighlight') then
-      local group = vim.api.nvim_create_augroup('lsp-highlight-' .. args.buf, {
-        clear =
-            true
-      })
+    if client and client:supports_method('textDocument/documentHighlight') then
+      local group = vim.api.nvim_create_augroup('lsp-highlight-' .. args.buf, { clear = true })
       vim.api.nvim_create_autocmd('CursorHold', {
         buffer = args.buf,
         group = group,

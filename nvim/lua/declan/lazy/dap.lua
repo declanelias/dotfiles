@@ -1,6 +1,10 @@
 return {
   {
     "mfussenegger/nvim-dap",
+    -- lazy-load: the dap stack (dap, dap-ui, nvim-nio, vscode-js-debug) is the
+    -- heaviest part of startup; bare-string triggers load the plugin and
+    -- re-feed the keys, which the real keymaps in config() then handle
+    keys = { "<leader>d", "<F1>", "<F2>", "<F3>" },
     dependencies = {
       "rcarriga/nvim-dap-ui",
       "nvim-neotest/nvim-nio",
@@ -71,6 +75,9 @@ return {
 
   {
     "Weissle/persistent-breakpoints.nvim",
+    -- it requires dap.breakpoints at load time, so loading it eagerly would
+    -- drag the whole dap stack into startup
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
       require("persistent-breakpoints").setup({
         load_breakpoints_event = { "BufReadPost" },

@@ -10,10 +10,32 @@ return {
         view_options = {
             show_hidden = true, -- neo-tree showed dotfiles; keep them visible
         },
+        keymaps = {
+            -- zellij (clear-defaults) swallows <C-s>/<C-h>/<C-t>/<C-p> before nvim
+            -- sees them, so oil's split/tab/preview opens are unreachable. Mirror
+            -- them onto the g-prefix oil already uses for gx/gs/g./g?
+            ["gv"] = { "actions.select", opts = { vertical = true }, desc = "Open in vsplit" },
+            ["gh"] = { "actions.select", opts = { horizontal = true }, desc = "Open in split" },
+            ["gt"] = { "actions.select", opts = { tab = true }, desc = "Open in new tab" },
+            ["gp"] = { "actions.preview", desc = "Preview" },
+            ["q"] = { "actions.close", mode = "n" },
+        },
     },
     keys = {
-        -- both open oil in a floating window at the current file's directory
-        { "-", function() require("oil").open_float() end, desc = "Open parent dir (oil)" },
-        { "<leader>e", function() require("oil").open_float() end, desc = "File explorer (oil)" },
+        -- in-window, NOT a float: oil takes over the current buffer and close()
+        -- puts the old one back, so splits/jumps/<leader>w all behave normally
+        { "-", function() require("oil").open() end, desc = "Open parent dir (oil)" },
+        {
+            "<leader>e",
+            function()
+                local oil = require("oil")
+                if vim.bo.filetype == "oil" then
+                    oil.close()
+                else
+                    oil.open()
+                end
+            end,
+            desc = "File explorer (oil)",
+        },
     },
 }

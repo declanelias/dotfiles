@@ -29,7 +29,7 @@ install_oh_my_zsh() {
 }
 
 install_brew_packages() {
-  local formulae=(neovim zellij)
+  local formulae=(neovim zellij node tree-sitter-cli)
   local tapped=(koekeishiya/formulae/yabai koekeishiya/formulae/skhd)
   local casks=(ghostty)
 

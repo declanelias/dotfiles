@@ -13,3 +13,4 @@ done
 export PATH="$PATH:/Users/declanelias/.lmstudio/bin"
 # End of LM Studio CLI section
 
+export PATH="/opt/homebrew/opt/node@20/bin:$PATH"

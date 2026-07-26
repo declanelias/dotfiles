@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""worklog-report — aggregate the worklog JSONL streams into a readable report.
+
+Usage:
+  worklog-report            # today
+  worklog-report --days 7   # last 7 days
+"""
+import argparse
+import json
+import os
+import sys
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
+
+LOGDIR = os.environ.get("WORKLOG_DIR", os.path.expanduser("~/.local/share/worklog"))
+
+
+def load(prefix, days):
+    entries = []
+    for d in range(days):
+        day = (date.today() - timedelta(days=d)).isoformat()
+        path = os.path.join(LOGDIR, f"{prefix}-{day}.jsonl")
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            for line in f:
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    entries.sort(key=lambda e: e.get("ts", ""))
+    return entries
+
+
+def fmt_dur(seconds):
+    seconds = int(seconds)
+    if seconds >= 3600:
+        return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
+    if seconds >= 60:
+        return f"{seconds // 60}m{seconds % 60:02d}s"
+    return f"{seconds}s"
+
+
+def section(title):
+    print(f"\n\033[1m── {title} " + "─" * max(0, 50 - len(title)) + "\033[0m")
+
+
+def report_shell(entries):
+    if not entries:
+        return
+    section(f"shell — {len(entries)} commands")
+    heads = Counter()
+    cwds = Counter()
+    fails = Counter()
+    long_running = []
+    for e in entries:
+        toks = e.get("cmd", "").split()
+        head = " ".join(toks[:2]) if toks and toks[0] in (
+            "git", "cargo", "docker", "npm", "pnpm", "yarn", "zellij", "kubectl", "gh"
+        ) else (toks[0] if toks else "?")
+        heads[head] += 1
+        cwds[e.get("cwd", "?").replace(os.path.expanduser("~"), "~")] += 1
+        if e.get("exit", 0) != 0:
+            fails[head] += 1
+        if e.get("dur_s", 0) > 60:
+            long_running.append(e)
+
+    print("top commands:")
+    for cmd, n in heads.most_common(12):
+        f = f"  ({fails[cmd]} failed)" if fails.get(cmd) else ""
+        print(f"  {n:4d}  {cmd}{f}")
+    print("top directories:")
+    for cwd, n in cwds.most_common(6):
+        print(f"  {n:4d}  {cwd}")
+    if long_running:
+        print(f"commands >1min: {len(long_running)} "
+              f"(total {fmt_dur(sum(e['dur_s'] for e in long_running))})")
+        for e in sorted(long_running, key=lambda x: -x["dur_s"])[:5]:
+            print(f"  {fmt_dur(e['dur_s']):>7}  {e['cmd'][:70]}")
+
+
+def report_focus(entries):
+    if not entries:
+        return
+    # consecutive entries per session -> durations
+    by_session = defaultdict(list)
+    for e in entries:
+        by_session[e.get("session", "?")].append(e)
+    section("focus (zellij)")
+    for sess, evs in by_session.items():
+        tab_time = Counter()
+        cmd_time = Counter()
+        switches = 0
+        prev = None
+        for i, e in enumerate(evs):
+            t0 = datetime.fromisoformat(e["ts"])
+            t1 = datetime.fromisoformat(evs[i + 1]["ts"]) if i + 1 < len(evs) else t0
+            dur = min((t1 - t0).total_seconds(), 300)  # cap gaps (detached time)
+            tab_time[e.get("tab") or "?"] += dur
+            cmd_time[e.get("cmd") or "(shell)"] += dur
+            key = (e.get("tab"), e.get("pane"))
+            if prev is not None and key != prev:
+                switches += 1
+            prev = key
+        total = sum(tab_time.values())
+        print(f"session {sess}: ~{fmt_dur(total)} attached, {switches} pane/tab switches")
+        for tab, secs in tab_time.most_common(8):
+            print(f"  {fmt_dur(secs):>7}  tab {tab}")
+        top_cmds = ", ".join(f"{c} {fmt_dur(s)}" for c, s in cmd_time.most_common(4))
+        print(f"  focused commands: {top_cmds}")
+
+
+def report_nvim(entries):
+    if not entries:
+        return
+    keys = insert = arrows = 0
+    top = Counter()
+    modes = Counter()
+    repeats = []
+    leader = Counter()
+    writes = Counter()
+    macros = 0
+    for e in entries:
+        ev = e.get("event")
+        if ev == "stats":
+            keys += e.get("keys", 0)
+            insert += e.get("insert_keys", 0)
+            arrows += e.get("arrow_keys", 0)
+            top.update(e.get("top") or {})
+            modes.update(e.get("modes") or {})
+            repeats.extend(e.get("repeats") or [])
+            leader.update(e.get("leader") or {})
+        elif ev == "buf_write":
+            writes[e.get("file", "?")] += 1
+        elif ev == "macro_recorded":
+            macros += 1
+    section(f"nvim — {keys} keys, {sum(writes.values())} writes, {macros} macros")
+    if keys:
+        print(f"insert-mode share: {100 * insert // max(keys, 1)}%   arrow keys: {arrows}")
+    if modes:
+        print("mode time: " + ", ".join(f"{m} {fmt_dur(s)}" for m, s in modes.most_common()))
+    if top:
+        print("top normal-mode keys: " +
+              ", ".join(f"{k}×{n}" for k, n in top.most_common(12)))
+    if repeats:
+        runs = Counter(f"{r['key']}×{r['len']}" for r in repeats)
+        print(f"repeat-runs (≥5 of same motion): {len(repeats)} — e.g. " +
+              ", ".join(k for k, _ in runs.most_common(5)))
+    if leader:
+        print("leader maps fired: " +
+              ", ".join(f"{k}×{n}" for k, n in leader.most_common(10)))
+    if writes:
+        print("most-saved files:")
+        for f, n in writes.most_common(5):
+            print(f"  {n:3d}  {f}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--days", type=int, default=1)
+    args = ap.parse_args()
+    print(f"worklog report — last {args.days} day(s), from {LOGDIR}")
+    shell = load("shell", args.days)
+    focus = load("focus", args.days)
+    nvim = load("nvim", args.days)
+    if not (shell or focus or nvim):
+        print("no data yet.")
+        return 1
+    report_shell(shell)
+    report_focus(focus)
+    report_nvim(nvim)
+    print()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

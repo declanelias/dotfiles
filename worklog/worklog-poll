@@ -1,0 +1,56 @@
+#!/bin/bash
+# worklog-poll — one snapshot tick of zellij focus state.
+# Run by LaunchAgent com.declanelias.worklog-poll every 20s.
+# For each *attached* zellij session, logs the focused tab, focused pane id,
+# and the command running in it. Writes only when state changed since the
+# last tick (or every 240s as a heartbeat), so idle time costs ~nothing.
+# Output: ~/.local/share/worklog/focus-YYYY-MM-DD.jsonl
+
+set -u
+PATH="/opt/homebrew/bin:/usr/bin:/bin:$PATH"
+
+LOGDIR="${WORKLOG_DIR:-$HOME/.local/share/worklog}"
+mkdir -p "$LOGDIR"
+STATEDIR="$LOGDIR/.state"
+mkdir -p "$STATEDIR"
+
+ts=$(date +%Y-%m-%dT%H:%M:%S)
+day=$(date +%F)
+now=$(date +%s)
+HEARTBEAT=240
+
+command -v zellij >/dev/null || exit 0
+command -v jq >/dev/null || exit 0
+
+zellij list-sessions -n 2>/dev/null | grep -v EXITED | awk '{print $1}' | \
+while read -r session; do
+  [ -n "$session" ] || continue
+
+  # Focused pane + its running command; only present when a client is attached.
+  client_line=$(zellij --session "$session" action list-clients 2>/dev/null | sed -n 2p)
+  [ -n "$client_line" ] || continue
+  pane=$(echo "$client_line" | awk '{print $2}' | sed 's/terminal_//; s/plugin_//')
+  cmd=$(echo "$client_line" | awk '{for (i=3; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : "")}')
+
+  # Focused tab name from the live layout.
+  tab=$(zellij --session "$session" action dump-layout 2>/dev/null |
+        grep -m1 -E '^\s*tab .*focus=true' | sed -E 's/.*name="([^"]*)".*/\1/')
+
+  state="$tab|$pane|$cmd"
+  statefile="$STATEDIR/$session"
+  last_state=""
+  last_ts=0
+  if [ -f "$statefile" ]; then
+    last_state=$(sed -n 1p "$statefile")
+    last_ts=$(sed -n 2p "$statefile")
+    [ -n "$last_ts" ] || last_ts=0
+  fi
+
+  if [ "$state" != "$last_state" ] || [ $(( now - last_ts )) -ge $HEARTBEAT ]; then
+    jq -cn --arg ts "$ts" --arg session "$session" --arg tab "$tab" \
+           --arg pane "$pane" --arg cmd "$cmd" \
+      '{ts:$ts, src:"focus", session:$session, tab:$tab, pane:$pane, cmd:$cmd}' \
+      >> "$LOGDIR/focus-$day.jsonl"
+    printf '%s\n%s\n' "$state" "$now" > "$statefile"
+  fi
+done

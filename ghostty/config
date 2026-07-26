@@ -1,6 +1,4 @@
 theme = Nord
-background-opacity = 0.75
-background-blur = 20
 # hide titlebar: no title text / folder icon, traffic-light buttons float over the terminal
 macos-titlebar-style = hidden
 

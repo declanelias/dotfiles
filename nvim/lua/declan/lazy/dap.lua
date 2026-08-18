@@ -8,6 +8,7 @@ return {
     dependencies = {
       "rcarriga/nvim-dap-ui",
       "nvim-neotest/nvim-nio",
+      "mfussenegger/nvim-dap-python",
       {
         "mxsdev/nvim-dap-vscode-js",
         dependencies = {
@@ -27,6 +28,12 @@ return {
         debugger_path = vim.fn.stdpath("data") .. "/lazy/vscode-js-debug",
         adapters = { "pwa-node" },
       })
+
+      -- registers the python adapter AND the default configurations (launch
+      -- file, launch with args, pytest); the path is the interpreter debugpy
+      -- itself runs under -- the debugged script uses $VIRTUAL_ENV if set,
+      -- else falls back to this one (which has no third-party packages)
+      require("dap-python").setup(vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python")
 
       dapui.setup()
 

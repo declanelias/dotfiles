@@ -1,0 +1,16 @@
+layout {
+  cwd "/Users/declanelias/mag/monorepo/"
+
+  tab name="Vim" focus=true {
+    pane name="Vim" {
+      command "nvim"
+      args "."
+    }
+  }
+
+  tab name="TS" {
+    pane name="data sync" {
+      command "yarn start_data-sync"
+    }
+  }
+}

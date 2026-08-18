@@ -1,7 +1,7 @@
 -- parser names (what gets installed) vs filetypes (what triggers highlighting):
 -- typescriptreact uses the tsx parser, javascriptreact uses the javascript parser
-local parsers = { "lua", "typescript", "tsx", "javascript", "python", "rust" }
-local filetypes = { "lua", "typescript", "typescriptreact", "javascript", "javascriptreact", "python", "rust" }
+local parsers = { "lua", "typescript", "tsx", "javascript", "python", "rust", "haskell" }
+local filetypes = { "lua", "typescript", "typescriptreact", "javascript", "javascriptreact", "python", "rust", "haskell" }
 
 require("nvim-treesitter").setup({
 	install_dir = vim.fn.stdpath('data') .. '/site'

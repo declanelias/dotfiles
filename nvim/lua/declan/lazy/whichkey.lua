@@ -8,6 +8,7 @@ return {
             { "<leader>f", group = "Find" },
             { "<leader>h", group = "Git hunks" },
             { "<leader>l", group = "LSP" },
+            { "<leader>lh", group = "Haskell" },
             { "<leader>w", group = "Window" },
         },
     },

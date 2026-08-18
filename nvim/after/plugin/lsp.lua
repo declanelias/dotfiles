@@ -29,6 +29,7 @@ vim.lsp.config.pyright = {}
 vim.lsp.config.clangd = {}
 
 -- Rust: managed by rustaceanvim, not configured here
+-- Haskell: managed by haskell-tools, not configured here
 
 -- Advertise foldingRange support to every server (consumed by nvim-ufo's lsp provider).
 -- Deep-merges with blink.cmp's capabilities rather than replacing them.

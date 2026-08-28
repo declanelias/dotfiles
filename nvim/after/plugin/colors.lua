@@ -1,6 +1,12 @@
 -- make nord's Normal bg transparent so the terminal (ghostty opacity) shows through
 vim.g.nord_disable_background = true
 
+-- markview blends its heading/callout backgrounds against Normal's bg, but the
+-- line above leaves Normal bg unset, so it falls back to its built-in catppuccin
+-- dark (#1e1e2e) and every tinted block comes out faintly purple. Point it at
+-- nord0 -- the color ghostty is actually painting behind the transparency.
+vim.g.markview_dark_bg = "#2e3440"
+
 function SetColor(color)
 	color = color or "nord"
 	vim.cmd.colorscheme(color)

@@ -5,6 +5,10 @@ require("mason-lspconfig").setup({
     "ts_ls",
     "pyright",
     "clangd",
+    "eslint",
+    "jsonls",
+    "taplo",
+    "yamlls",
   },
 })
 
@@ -28,6 +32,13 @@ vim.lsp.config.pyright = {}
 -- C/C++
 vim.lsp.config.clangd = {}
 
+-- Project linting and config-file schemas. Each server still uses its own root
+-- markers, so these only attach in projects where they are relevant.
+vim.lsp.config.eslint = {}
+vim.lsp.config.jsonls = {}
+vim.lsp.config.taplo = {}
+vim.lsp.config.yamlls = {}
+
 -- Rust: managed by rustaceanvim, not configured here
 -- Haskell: managed by haskell-tools, not configured here
 
@@ -45,7 +56,7 @@ vim.lsp.config("*", {
 })
 
 -- Enable the servers
-vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "clangd" })
+vim.lsp.enable({ "lua_ls", "ts_ls", "pyright", "clangd", "eslint", "jsonls", "taplo", "yamlls" })
 
 -- Delete nvim's default gr-prefixed LSP maps (grr/grn/gra/gri/grt) so the
 -- buffer-local `gr` below fires without waiting out the chord timeout
@@ -79,9 +90,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 vim.diagnostic.config({
-  virtual_text = true, -- show error/warning text inline at end of line
-  signs = true,       -- show icons in the sign column
-  underline = true,   -- underline the problematic code
+  update_in_insert = true, -- surface LSP diagnostics while typing instead of waiting for Normal mode
+  -- virtual_text is a single-line renderer with no wrapping, so long messages
+  -- (Rust trait bounds especially) run off the window edge. Pair the two
+  -- renderers instead: compact hint on every line EXCEPT the cursor line, full
+  -- wrapped text on virtual lines under it. current_line = false means "show
+  -- everywhere but the cursor line", so the two never double-report.
+  virtual_text = { current_line = false },  -- inline hint on every other line
+  virtual_lines = { current_line = true },  -- full message below the cursor line
+  signs = true,     -- show icons in the sign column
+  underline = true, -- underline the problematic code
 })
 
 vim.api.nvim_create_autocmd('LspAttach', {

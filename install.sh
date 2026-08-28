@@ -29,7 +29,7 @@ install_oh_my_zsh() {
 }
 
 install_brew_packages() {
-  local formulae=(neovim zellij node tree-sitter-cli)
+  local formulae=(neovim zellij node tree-sitter-cli shfmt)
   local tapped=(koekeishiya/formulae/yabai koekeishiya/formulae/skhd)
   local casks=(ghostty)
 
@@ -82,8 +82,8 @@ install_zsh_plugins() {
 }
 
 create_symlinks() {
-  local targets=("$HOME/.zshrc" "$HOME/.zsh" "$HOME/.config/yabai/yabairc" "$HOME/.config/skhd/skhdrc" "$HOME/.config/nvim" "$HOME/.config/zellij" "$HOME/.config/ghostty")
-  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh" "$DOTFILES_DIR/yabai/yabairc" "$DOTFILES_DIR/skhd/skhdrc" "$DOTFILES_DIR/nvim" "$DOTFILES_DIR/zellij" "$DOTFILES_DIR/ghostty")
+  local targets=("$HOME/.zshrc" "$HOME/.zsh" "$HOME/.config/yabai/yabairc" "$HOME/.config/skhd/skhdrc" "$HOME/.config/nvim" "$HOME/.config/zellij" "$HOME/.config/ghostty" "$HOME/.codex/config.toml")
+  local sources=("$DOTFILES_DIR/.zshrc" "$DOTFILES_DIR/.zsh" "$DOTFILES_DIR/yabai/yabairc" "$DOTFILES_DIR/skhd/skhdrc" "$DOTFILES_DIR/nvim" "$DOTFILES_DIR/zellij" "$DOTFILES_DIR/ghostty" "$DOTFILES_DIR/codex/config.toml")
   local created=false
 
   for i in "${!targets[@]}"; do

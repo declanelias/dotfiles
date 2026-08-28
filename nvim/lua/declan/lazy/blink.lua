@@ -10,7 +10,9 @@ return {
 			documentation = { auto_show = true },
 		},
 		sources = {
-			default = { "lsp", "path", "buffer" },
+			-- The built-in snippets source uses vim.snippet; no separate snippet
+			-- engine is needed, and LSP/custom snippets can use Tab placeholders.
+			default = { "lsp", "path", "snippets", "buffer" },
 		},
 	},
 }

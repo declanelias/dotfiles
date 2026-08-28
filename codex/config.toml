@@ -2,10 +2,11 @@ model = "gpt-5.6-sol"
 model_context_window = 1000000
 model_auto_compact_token_limit = 900000
 model_reasoning_effort = "high"
-approvals_reviewer = "user"
+# Equivalent to `codex --yolo`: no sandbox and no approval prompts.
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 service_tier = "fast"
+web_search = "live"
 
 [projects."/Users/declanelias"]
 trust_level = "trusted"

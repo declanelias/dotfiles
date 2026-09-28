@@ -13,6 +13,7 @@ vim.opt.cursorline = true
 vim.opt.signcolumn = "yes:1"
 vim.opt.scrolloff = 8
 vim.opt.showcmd = true
+vim.opt.confirm = true
 
 vim.opt.wrap = true
 vim.opt.linebreak = true -- wrap at word boundaries, not mid-word

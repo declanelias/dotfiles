@@ -1,29 +1,31 @@
--- make nord's Normal bg transparent so the terminal (ghostty opacity) shows through
-vim.g.nord_disable_background = true
-
 -- markview blends its heading/callout backgrounds against Normal's bg, but the
--- line above leaves Normal bg unset, so it falls back to its built-in catppuccin
--- dark (#1e1e2e) and every tinted block comes out faintly purple. Point it at
--- nord0 -- the color ghostty is actually painting behind the transparency.
-vim.g.markview_dark_bg = "#2e3440"
+-- colorscheme leaves Normal transparent. Point it at the published Zenwritten
+-- background that Ghostty paints behind Neovim.
+vim.g.markview_dark_bg = "#191919"
 
 function SetColor(color)
-	color = color or "nord"
+	color = color or "zenwritten"
 	vim.cmd.colorscheme(color)
 
-	-- inlay type hints (rust etc.) default to NonText (#3b4252), which blends
-	-- into nord0 (#2e3440). bump to frost blue so they're actually visible.
-	vim.api.nvim_set_hl(0, "LspInlayHint", { fg = "#81a1c1" })
-	vim.api.nvim_set_hl(0, "InlayHint", { fg = "#81a1c1" })
-
-	-- shaunsingh/nord.nvim predates the modern JSX/TSX treesitter capture
-	-- groups, so it leaves them at Normal fg (#d8dee9) -> React components
-	-- render with no color. give them the nord palette explicitly.
-	vim.api.nvim_set_hl(0, "@tag.builtin.tsx", { fg = "#81a1c1" }) -- html tags: <div>
-	vim.api.nvim_set_hl(0, "@tag.tsx", { fg = "#8fbcbb", bold = true }) -- components: <MyComponent>
-	vim.api.nvim_set_hl(0, "@tag.attribute", { fg = "#ebcb8b", italic = true }) -- className, foo
-	vim.api.nvim_set_hl(0, "@variable.member", { fg = "#d8dee9" }) -- obj.prop / props
-	vim.api.nvim_set_hl(0, "@constructor.tsx", { fg = "#8fbcbb", bold = true })
+	-- oil-git initializes before the colorscheme, which clears its highlight
+	-- groups while leaving the status symbols in place. Restore familiar VS Code
+	-- Git decoration colors after every colorscheme change.
+	local oil_git_colors = {
+		OilGitAdded = "#81b88b",
+		OilGitModified = "#e2c08d",
+		OilGitModifiedStaged = "#e2c08d",
+		OilGitModifiedUnstaged = "#e2c08d",
+		OilGitRenamed = "#73c991",
+		OilGitCopied = "#73c991",
+		OilGitDeleted = "#c74e39",
+		OilGitConflict = "#e4676b",
+		OilGitUntracked = "#73c991",
+		OilGitIgnored = "#8c8c8c",
+		OilGitBranch = "#8db9e2",
+	}
+	for group, foreground in pairs(oil_git_colors) do
+		vim.api.nvim_set_hl(0, group, { fg = foreground })
+	end
 end
 
 SetColor()

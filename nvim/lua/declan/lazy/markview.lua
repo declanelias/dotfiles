@@ -12,7 +12,7 @@ return {
 
 	dependencies = {
 		"nvim-treesitter/nvim-treesitter", -- needs the markdown + markdown_inline parsers
-		"nvim-tree/nvim-web-devicons",     -- language icons on fenced code blocks
+		"nvim-tree/nvim-web-devicons", -- language icons on fenced code blocks
 	},
 
 	-- A function, not a table, so the preset can be required at load time.

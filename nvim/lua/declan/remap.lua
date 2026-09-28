@@ -1,11 +1,11 @@
 vim.g.mapleader = " "
--- <leader>e (and -) mapped in oil.lua plugin spec
+-- <leader>e is mapped in oil.lua's plugin spec
 
-vim.keymap.set("n", "H", "<C-o>")
-vim.keymap.set("n", "L", "<C-i>")
+vim.keymap.set("n", "H", "<C-o>", { desc = "Jump backward" })
+vim.keymap.set("n", "L", "<C-i>", { desc = "Jump forward" })
 
--- Window navigation under <leader>w instead of <C-w> — Ctrl chords are reserved
--- for zellij (clear-defaults keymap; <C-h> etc. are zellij mode-entry keys)
+-- Convenient aliases for Vim's native <C-w> window commands. Unlock-first
+-- Zellij also lets the original Control chords reach Neovim.
 vim.keymap.set("n", "<leader>wh", "<C-w>h", { desc = "Window left" })
 vim.keymap.set("n", "<leader>wj", "<C-w>j", { desc = "Window down" })
 vim.keymap.set("n", "<leader>wk", "<C-w>k", { desc = "Window up" })

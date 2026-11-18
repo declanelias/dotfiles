@@ -14,7 +14,8 @@ init.lua
 └── lua/declan/init.lua
     ├── remap.lua       leader and global mappings
     ├── set.lua         editor options
-    └── lazy_init.lua   lazy.nvim bootstrap and plugin discovery
+    ├── lazy_init.lua   lazy.nvim bootstrap and plugin discovery
+    └── pdf.lua         open PDFs in tdf instead of a buffer
 
 lua/declan/lazy/        one plugin spec (or plugin family) per file
 after/plugin/           shared LSP, Treesitter, color, and worklog setup
@@ -137,6 +138,12 @@ filetypes, including `javascriptreact`, `typescriptreact`, `jsonc`, and `sh`.
 
 ## Other local behavior
 
+- Opening a local PDF (`nvim file.pdf`, `:e`, Oil, Telescope) never loads its
+  bytes. Inside Rex, `tdf` opens in a split to the right of the editor and the
+  editor window returns to the buffer it came from; quitting `tdf` closes that
+  pane. Outside Rex, `tdf` opens in a terminal tab instead, at lower resolution
+  because Neovim's terminal cannot display image protocols. Without `tdf` on
+  `PATH`, PDFs behave normally. `:noautocmd edit file.pdf` opens the raw file.
 - Rust snippets include `fn`, `pfn` (public function), and `impl-trait`. Select
   the snippet in Blink and accept with Ctrl-Y, then use Tab/Shift-Tab to move
   between placeholders. Blink uses Neovim's native snippet engine.
@@ -162,6 +169,8 @@ this directory to `~/.config/nvim`. Some configured features still depend on
 tools being available from the project, system, or Mason:
 
 - Search: `git` and `rg` (Telescope live grep).
+- PDF viewing: `tdf` (currently `~/.local/bin/tdf`, not in the `Brewfile`) and,
+  for the side pane, the `rex` CLI.
 - Telescope/Dropbar FZF build: `make` and a C compiler.
 - JavaScript debugging: `node`/`npm`; the adapter is built by Lazy.
 - Python debugging: Mason's `debugpy` package at

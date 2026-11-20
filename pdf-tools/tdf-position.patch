@@ -1,0 +1,271 @@
+diff --git a/src/lib.rs b/src/lib.rs
+index 507415f..7ea0963 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -11,6 +11,7 @@ pub enum PrerenderLimit {
+ 
+ pub mod converter;
+ pub mod kitty;
++pub mod position;
+ pub mod renderer;
+ pub mod skip;
+ pub mod tui;
+diff --git a/src/main.rs b/src/main.rs
+index f431c73..2e1b89d 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -41,6 +41,7 @@ use tdf::{
+ 	kitty::{
+ 		DisplayErr, DisplayErrSource, KittyDisplay, display_kitty_images, do_shms_work, run_action
+ 	},
++	position::PositionStore,
+ 	renderer::{self, MUPDF_BLACK, MUPDF_WHITE, RenderError, RenderInfo, RenderNotif},
+ 	tui::{BottomMessage, InputAction, MessageSetting, Tui}
+ };
+@@ -374,7 +375,8 @@ async fn inner_main() -> Result<(), WrappedErr> {
+ 		tui,
+ 		&mut term,
+ 		main_area,
+-		font_size
++		font_size,
++		&PositionStore::for_document(&path)
+ 	)
+ 	.await
+ 	.map_err(|e| {
+@@ -402,10 +404,15 @@ async fn enter_redraw_loop(
+ 	mut tui: Tui,
+ 	term: &mut Terminal<CrosstermBackend<Stdout>>,
+ 	mut main_area: tdf::tui::RenderLayout,
+-	font_size: FontSize
++	font_size: FontSize,
++	positions: &PositionStore
+ ) -> Result<(), Box<dyn Error>> {
+ 	let mut kitty_z_idx = i32::MIN;
+ 
++	// The page to resume from. We can only jump to it once we know how many pages the document
++	// has (it may have shrunk since we saved the position), so it waits here until then.
++	let mut page_to_resume = positions.load();
++
+ 	loop {
+ 		let mut needs_redraw = true;
+ 		let next_ev = ev_stream.next().fuse();
+@@ -423,6 +430,11 @@ async fn enter_redraw_loop(
+ 						InputAction::JumpingToPage(page) => {
+ 							to_renderer.send(RenderNotif::JumpToPage(page))?;
+ 							to_converter.send(ConverterMsg::GoToPage(page))?;
++							// Saved on every change instead of on quit so that the position
++							// survives the terminal being closed out from under us
++							if let Err(e) = positions.save(page) {
++								log::warn!("Couldn't save the current page to resume from: {e}");
++							}
+ 						},
+ 						InputAction::Search(term) => to_renderer.send(RenderNotif::Search(term))?,
+ 						InputAction::Invert => to_renderer.send(RenderNotif::Invert)?,
+@@ -440,6 +452,12 @@ async fn enter_redraw_loop(
+ 						RenderInfo::NumPages(num) => {
+ 							tui.set_n_pages(num);
+ 							to_converter.send(ConverterMsg::NumPages(num))?;
++
++							if let Some(saved_page) = page_to_resume.take() {
++								let page = tui.resume_at_page(saved_page);
++								to_renderer.send(RenderNotif::JumpToPage(page))?;
++								to_converter.send(ConverterMsg::GoToPage(page))?;
++							}
+ 						},
+ 						RenderInfo::Page(info) => {
+ 							tui.got_num_results_on_page(info.page_num, info.result_rects.len());
+diff --git a/src/tui.rs b/src/tui.rs
+index a5573a6..75385ae 100644
+--- a/src/tui.rs
++++ b/src/tui.rs
+@@ -597,6 +597,13 @@ impl Tui {
+ 		self.page = self.page.min(n_pages - 1);
+ 	}
+ 
++	/// Moves to `page`, or to the last page if the document is shorter than that, and returns
++	/// the page that was moved to. Must be called after [`Self::set_n_pages`].
++	pub fn resume_at_page(&mut self, page: usize) -> usize {
++		self.set_page(page.min(self.rendered.len().saturating_sub(1)));
++		self.page
++	}
++
+ 	pub fn page_ready(&mut self, img: ConvertedImage, page_num: usize, num_results: usize) {
+ 		// If this new image woulda fit within the available space on the last render AND it's
+ 		// within the range where it might've been rendered with the last shown pages, then reset
+diff --git a/src/position.rs b/src/position.rs
+new file mode 100644
+index 0000000..75df17f
+--- /dev/null
++++ b/src/position.rs
+@@ -0,0 +1,171 @@
++//! Remembers which page of each document was last being read, so that reopening a document
++//! resumes where the reader left off.
++//!
++//! Each document gets its own small file in the state directory, named after a hash of the
++//! document's path. One file per document means several instances of tdf reading different
++//! documents never overwrite each other's positions.
++
++use core::num::NonZeroUsize;
++use std::{
++	env, fs, io,
++	path::{Path, PathBuf}
++};
++
++pub struct PositionStore {
++	/// The file holding the position for one document, or `None` if there is nowhere to keep it
++	file: Option<PathBuf>,
++	document: PathBuf
++}
++
++impl PositionStore {
++	/// `document` should be canonicalized, so that the same file reached through different
++	/// relative paths shares one position.
++	#[must_use]
++	pub fn for_document(document: &Path) -> Self {
++		Self::new(state_dir().as_deref(), document)
++	}
++
++	fn new(state_dir: Option<&Path>, document: &Path) -> Self {
++		Self {
++			file: state_dir.map(|dir| dir.join(file_name_for(document))),
++			document: document.to_owned()
++		}
++	}
++
++	/// The zero-indexed page that was last saved for this document, if any.
++	#[must_use]
++	pub fn load(&self) -> Option<usize> {
++		let contents = fs::read_to_string(self.file.as_deref()?).ok()?;
++		parse_page(&contents)
++	}
++
++	/// Saves the zero-indexed `page` as the place to resume this document from.
++	///
++	/// # Errors
++	///
++	/// Fails if the state directory or the position file can't be written.
++	pub fn save(&self, page: usize) -> io::Result<()> {
++		let Some(file) = self.file.as_deref() else {
++			return Ok(());
++		};
++
++		if let Some(dir) = file.parent() {
++			fs::create_dir_all(dir)?;
++		}
++
++		fs::write(file, format_position(page, &self.document))
++	}
++}
++
++/// `$XDG_STATE_HOME/tdf`, falling back to `~/.local/state/tdf`.
++fn state_dir() -> Option<PathBuf> {
++	let base = env::var_os("XDG_STATE_HOME")
++		.map(PathBuf::from)
++		.filter(|dir| dir.is_absolute())
++		.or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/state")))?;
++
++	Some(base.join("tdf"))
++}
++
++/// The first line is the page as shown in the UI (so, one-indexed); the second is the document's
++/// path, which is only there so that a person can tell which document a file belongs to.
++fn format_position(page: usize, document: &Path) -> String {
++	format!("{}\n{}\n", page.saturating_add(1), document.display())
++}
++
++fn parse_page(contents: &str) -> Option<usize> {
++	let shown_page: NonZeroUsize = contents.lines().next()?.trim().parse().ok()?;
++	Some(shown_page.get() - 1)
++}
++
++fn file_name_for(document: &Path) -> String {
++	format!("{:016x}", fnv1a_64(document.as_os_str().as_encoded_bytes()))
++}
++
++/// We hash by hand instead of with `std`'s `DefaultHasher` because that one's output is allowed
++/// to change between rust releases, which would orphan every saved position.
++fn fnv1a_64(bytes: &[u8]) -> u64 {
++	const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
++	const PRIME: u64 = 0x0100_0000_01b3;
++
++	bytes.iter().fold(OFFSET_BASIS, |hash, byte| {
++		(hash ^ u64::from(*byte)).wrapping_mul(PRIME)
++	})
++}
++
++#[cfg(test)]
++mod tests {
++	use super::*;
++
++	fn temp_state_dir(test: &str) -> PathBuf {
++		let dir = env::temp_dir().join(format!("tdf-position-{test}-{}", std::process::id()));
++		_ = fs::remove_dir_all(&dir);
++		dir
++	}
++
++	#[test]
++	fn saved_page_is_loaded_again() {
++		let dir = temp_state_dir("roundtrip");
++		let store = PositionStore::new(Some(&dir), Path::new("/books/rust.pdf"));
++
++		assert_eq!(store.load(), None, "nothing is saved before the first save");
++
++		store.save(41).unwrap();
++		assert_eq!(store.load(), Some(41), "the saved page should come back");
++
++		store.save(0).unwrap();
++		assert_eq!(store.load(), Some(0), "a later save should replace the earlier one");
++
++		fs::remove_dir_all(&dir).unwrap();
++	}
++
++	#[test]
++	fn documents_keep_separate_positions() {
++		let dir = temp_state_dir("separate");
++		let rust = PositionStore::new(Some(&dir), Path::new("/books/rust.pdf"));
++		let zig = PositionStore::new(Some(&dir), Path::new("/books/zig.pdf"));
++
++		rust.save(7).unwrap();
++		zig.save(99).unwrap();
++
++		assert_eq!(rust.load(), Some(7), "saving another document must not move this one");
++		assert_eq!(zig.load(), Some(99), "each document resumes from its own page");
++
++		fs::remove_dir_all(&dir).unwrap();
++	}
++
++	#[test]
++	fn no_state_dir_means_no_position() {
++		let store = PositionStore::new(None, Path::new("/books/rust.pdf"));
++
++		store.save(3).unwrap();
++		assert_eq!(store.load(), None, "without a state dir there is nothing to load");
++	}
++
++	#[test]
++	fn position_file_shows_the_page_as_the_ui_does() {
++		let contents = format_position(0, Path::new("/books/rust.pdf"));
++
++		assert_eq!(contents, "1\n/books/rust.pdf\n", "the first page is shown as page 1");
++		assert_eq!(parse_page(&contents), Some(0), "and parses back to index 0");
++	}
++
++	#[test]
++	fn unreadable_position_is_ignored() {
++		for contents in ["", "\n", "0\n", "-4\n", "twelve\n"] {
++			assert_eq!(parse_page(contents), None, "{contents:?} is not a page");
++		}
++	}
++
++	#[test]
++	fn file_name_is_stable() {
++		// If this changes, every position saved by an earlier build is orphaned
++		assert_eq!(
++			file_name_for(Path::new("/books/rust.pdf")),
++			format!("{:016x}", fnv1a_64(b"/books/rust.pdf")),
++			"the name is the hash of the path's bytes"
++		);
++		assert_eq!(fnv1a_64(b""), 0xcbf2_9ce4_8422_2325, "FNV-1a offset basis");
++		assert_eq!(fnv1a_64(b"a"), 0xaf63_dc4c_8601_ec8c, "FNV-1a test vector");
++	}
++}
